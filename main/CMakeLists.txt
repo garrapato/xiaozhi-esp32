@@ -1185,6 +1185,22 @@ function(build_default_assets_bin)
     message(STATUS "Default assets build configured: ${GENERATED_ASSETS_BIN}")
 endfunction()
 
+function(build_sdkconfig_srmodels_bin output_file)
+    add_custom_command(
+        OUTPUT ${output_file}
+        COMMAND python ${PROJECT_DIR}/scripts/build_srmodels.py
+                --sdkconfig "${SDKCONFIG}"
+                --esp_sr_model_path "${ESP_SR_MODEL_PATH}"
+                --output "${output_file}"
+        DEPENDS
+            ${SDKCONFIG}
+            ${PROJECT_DIR}/scripts/build_srmodels.py
+            ${PROJECT_DIR}/scripts/build_default_assets.py
+        COMMENT "Building srmodels.bin based on sdkconfig"
+        VERBATIM
+    )
+endfunction()
+
 
 # Function to get local assets file path (handles both URL and local file)
 function(get_assets_local_file assets_source assets_local_file_var)
@@ -1261,7 +1277,20 @@ if ("${size}" AND "${offset}")
         set(ASSETS_PARTITION "assets")
         set(ASSETS_FILE "${CMAKE_BINARY_DIR}/${ASSETS_NAME}.bin")
 
-        build_speaker_assets_bin("${ASSETS_PARTITION}" ${EMOTE_RESOLUTION} ${ASSETS_FILE} ${CONFIG_MMAP_FILE_NAME_LENGTH})
+        if(CONFIG_WAKE_WORD_DISABLED)
+            build_speaker_assets_bin("${ASSETS_PARTITION}" ${EMOTE_RESOLUTION} ${ASSETS_FILE} ${CONFIG_MMAP_FILE_NAME_LENGTH})
+        else()
+            set(EMOTE_EXTERNAL_ASSETS_DIR "${CMAKE_BINARY_DIR}/emote_assets_external")
+            set(SDKCONFIG_SRMODELS_BIN "${EMOTE_EXTERNAL_ASSETS_DIR}/wakenet/srmodels.bin")
+
+            build_sdkconfig_srmodels_bin("${SDKCONFIG_SRMODELS_BIN}")
+            build_speaker_assets_bin("${ASSETS_PARTITION}" ${EMOTE_RESOLUTION} ${ASSETS_FILE} ${CONFIG_MMAP_FILE_NAME_LENGTH} "${EMOTE_EXTERNAL_ASSETS_DIR}")
+            add_custom_command(
+                OUTPUT ${ASSETS_FILE}
+                APPEND
+                DEPENDS ${SDKCONFIG_SRMODELS_BIN}
+            )
+        endif()
         message(STATUS "Generated emote assets: ${ASSETS_FILE} -> ${ASSETS_PARTITION} partition")
         esptool_py_flash_to_partition(flash "${ASSETS_PARTITION}" "${ASSETS_FILE}")
     elseif(CONFIG_FLASH_NONE_ASSETS)
