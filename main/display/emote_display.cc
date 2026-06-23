@@ -37,6 +37,11 @@ namespace emote {
 // ============================================================================
 
 static const char* TAG = "EmoteDisplay";
+static constexpr int BOOT_SPLASH_WIDTH = 360;
+static constexpr int BOOT_SPLASH_HEIGHT = 360;
+
+extern const uint8_t kotty_logo_sq_rgb565_start[] asm("_binary_kotty_logo_sq_rgb565_start");
+extern const uint8_t kotty_logo_sq_rgb565_end[] asm("_binary_kotty_logo_sq_rgb565_end");
 
 // ============================================================================
 // Forward Declarations
@@ -118,6 +123,8 @@ static emote_handle_t InitializeEmote(const esp_lcd_panel_handle_t panel, const 
 EmoteDisplay::EmoteDisplay(const esp_lcd_panel_handle_t panel, const esp_lcd_panel_io_handle_t panel_io,
                            const int width, const int height)
 {
+    width_ = width;
+    height_ = height;
     emote_handle_ = InitializeEmote(panel, width, height);
 
     const esp_lcd_panel_io_callbacks_t cbs = {
@@ -197,6 +204,59 @@ void EmoteDisplay::SetPowerSaveMode(bool on)
     if (!emote_handle_) {
         return;
     }
+}
+
+void EmoteDisplay::ShowBootSplash(int duration_ms)
+{
+    if (!emote_handle_) {
+        vTaskDelay(pdMS_TO_TICKS(duration_ms));
+        return;
+    }
+
+    const size_t image_size = kotty_logo_sq_rgb565_end - kotty_logo_sq_rgb565_start;
+    const size_t expected_size = BOOT_SPLASH_WIDTH * BOOT_SPLASH_HEIGHT * sizeof(uint16_t);
+    if (image_size != expected_size) {
+        ESP_LOGW(TAG, "Invalid splash image size: %u, expected %u",
+                 static_cast<unsigned>(image_size), static_cast<unsigned>(expected_size));
+        vTaskDelay(pdMS_TO_TICKS(duration_ms));
+        return;
+    }
+
+    if (!boot_splash_obj_) {
+        boot_splash_obj_ = emote_create_obj_by_type(emote_handle_, EMOTE_OBJ_TYPE_IMAGE, "boot_splash");
+    }
+
+    if (!boot_splash_obj_) {
+        ESP_LOGW(TAG, "Failed to create boot splash object");
+        vTaskDelay(pdMS_TO_TICKS(duration_ms));
+        return;
+    }
+
+    boot_splash_image_dsc_.header.magic = C_ARRAY_HEADER_MAGIC;
+    boot_splash_image_dsc_.header.cf = GFX_COLOR_FORMAT_RGB565;
+    boot_splash_image_dsc_.header.flags = 0;
+    boot_splash_image_dsc_.header.w = BOOT_SPLASH_WIDTH;
+    boot_splash_image_dsc_.header.h = BOOT_SPLASH_HEIGHT;
+    boot_splash_image_dsc_.header.stride = BOOT_SPLASH_WIDTH * sizeof(uint16_t);
+    boot_splash_image_dsc_.header.reserved = 0;
+    boot_splash_image_dsc_.data_size = image_size;
+    boot_splash_image_dsc_.data = kotty_logo_sq_rgb565_start;
+    boot_splash_image_dsc_.reserved = nullptr;
+    boot_splash_image_dsc_.reserved_2 = nullptr;
+
+    emote_lock(emote_handle_);
+    gfx_img_set_src(boot_splash_obj_, &boot_splash_image_dsc_);
+    gfx_obj_align(boot_splash_obj_, GFX_ALIGN_CENTER, 0, 0);
+    gfx_obj_set_visible(boot_splash_obj_, true);
+    emote_unlock(emote_handle_);
+    RefreshAll();
+
+    vTaskDelay(pdMS_TO_TICKS(duration_ms));
+
+    emote_lock(emote_handle_);
+    gfx_obj_set_visible(boot_splash_obj_, false);
+    emote_unlock(emote_handle_);
+    RefreshAll();
 }
 
 void EmoteDisplay::SetPreviewImage(const void* image)

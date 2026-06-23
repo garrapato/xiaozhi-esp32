@@ -65,6 +65,7 @@ void Application::Initialize() {
     // Setup the display
     auto display = board.GetDisplay();
     display->SetupUI();
+    display->ShowBootSplash(3000);
     // Print board name/version info
     display->SetChatMessage("system", SystemInfo::GetUserAgent().c_str());
 
@@ -1128,4 +1129,3 @@ void Application::ResetProtocol() {
         protocol_.reset();
     });
 }
-

@@ -1019,6 +1019,7 @@ if(CONFIG_IDF_TARGET_ESP32S3)
 endif()
 
 set(MAIN_PRIV_REQUIRES_EXTRA "")
+set(MAIN_EMBED_FILES_EXTRA "")
 if(BOARD_TYPE STREQUAL "m5stack-stick-s3")
     list(APPEND MAIN_PRIV_REQUIRES_EXTRA
         m5stack__m5pm1
@@ -1029,10 +1030,13 @@ if(CONFIG_BOARD_TYPE_ESP_VOCAT)
         espressif__touch_slider_sensor
         espressif__touch_button_sensor
     )
+    list(APPEND MAIN_EMBED_FILES_EXTRA
+        "${CMAKE_CURRENT_SOURCE_DIR}/boards/esp-vocat/assets/splash/kotty-logo-sq.rgb565"
+    )
 endif()
 
 idf_component_register(SRCS ${SOURCES}
-                    EMBED_FILES ${LANG_SOUNDS} ${COMMON_SOUNDS}
+                    EMBED_FILES ${LANG_SOUNDS} ${COMMON_SOUNDS} ${MAIN_EMBED_FILES_EXTRA}
                     INCLUDE_DIRS ${INCLUDE_DIRS}
                     WHOLE_ARCHIVE
                     PRIV_REQUIRES
@@ -1205,10 +1209,16 @@ function(stage_board_emote_assets source_dir output_dir stamp_file)
     file(GLOB_RECURSE BOARD_EMOTE_ASSET_FILES CONFIGURE_DEPENDS "${source_dir}/*")
     add_custom_command(
         OUTPUT ${stamp_file}
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${output_dir}"
-        COMMAND ${CMAKE_COMMAND} -E copy_directory "${source_dir}" "${output_dir}"
-        COMMAND ${CMAKE_COMMAND} -E touch "${stamp_file}"
-        DEPENDS ${BOARD_EMOTE_ASSET_FILES}
+        COMMAND python ${PROJECT_DIR}/scripts/run_with_lock.py
+                --lock "${CMAKE_BINARY_DIR}/emote_assets.lock"
+                --script "${PROJECT_DIR}/scripts/stage_emote_assets.py"
+                -- --source "${source_dir}"
+                   --output "${output_dir}"
+                   --stamp "${stamp_file}"
+        DEPENDS
+            ${BOARD_EMOTE_ASSET_FILES}
+            ${PROJECT_DIR}/scripts/run_with_lock.py
+            ${PROJECT_DIR}/scripts/stage_emote_assets.py
         COMMENT "Staging board emote assets from ${source_dir}"
         VERBATIM
     )
