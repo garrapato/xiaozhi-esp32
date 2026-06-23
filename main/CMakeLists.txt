@@ -1201,6 +1201,69 @@ function(build_sdkconfig_srmodels_bin output_file)
     )
 endfunction()
 
+function(stage_board_emote_assets source_dir output_dir stamp_file)
+    file(GLOB_RECURSE BOARD_EMOTE_ASSET_FILES CONFIGURE_DEPENDS "${source_dir}/*")
+    add_custom_command(
+        OUTPUT ${stamp_file}
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${output_dir}"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${source_dir}" "${output_dir}"
+        COMMAND ${CMAKE_COMMAND} -E touch "${stamp_file}"
+        DEPENDS ${BOARD_EMOTE_ASSET_FILES}
+        COMMENT "Staging board emote assets from ${source_dir}"
+        VERBATIM
+    )
+endfunction()
+
+function(build_locked_speaker_assets_bin partition_name resolution output_path)
+    get_component_path("esp_emote_assets" component_path)
+
+    set(BUILD_ARGS
+        "--resolution" "${resolution}"
+        "--output" "${output_path}"
+    )
+
+    if(ARGC GREATER 3)
+        list(APPEND BUILD_ARGS "--name_length" "${ARGV3}")
+    endif()
+
+    if(ARGC GREATER 4)
+        list(APPEND BUILD_ARGS "--external_path" "${ARGV4}")
+    endif()
+
+    add_custom_command(
+        OUTPUT ${output_path}
+        COMMAND python ${PROJECT_DIR}/scripts/run_with_lock.py
+                --lock "${CMAKE_BINARY_DIR}/emote_assets.lock"
+                --script "${component_path}/scripts/spiffs_assets/build_all.py"
+                -- ${BUILD_ARGS}
+        DEPENDS
+            ${component_path}/scripts/spiffs_assets/build_all.py
+            ${PROJECT_DIR}/scripts/run_with_lock.py
+        COMMENT "Building emote_assets.bin based on configuration"
+        VERBATIM
+    )
+
+    add_custom_target(generated_speaker_assets ALL
+        DEPENDS ${output_path}
+    )
+
+    add_dependencies(flash generated_speaker_assets)
+
+    add_custom_command(
+        OUTPUT ${output_path}.validated
+        COMMAND ${CMAKE_COMMAND} -E echo "Validating speaker assets partition size..."
+        COMMAND ${CMAKE_COMMAND} -E touch ${output_path}.validated
+        DEPENDS ${output_path}
+        COMMENT "Validating speaker assets partition size"
+    )
+
+    add_custom_target(validate_speaker_assets ALL
+        DEPENDS ${output_path}.validated
+    )
+
+    validate_partition_size(${partition_name} ${output_path})
+endfunction()
+
 
 # Function to get local assets file path (handles both URL and local file)
 function(get_assets_local_file assets_source assets_local_file_var)
@@ -1281,14 +1344,28 @@ if ("${size}" AND "${offset}")
             build_speaker_assets_bin("${ASSETS_PARTITION}" ${EMOTE_RESOLUTION} ${ASSETS_FILE} ${CONFIG_MMAP_FILE_NAME_LENGTH})
         else()
             set(EMOTE_EXTERNAL_ASSETS_DIR "${CMAKE_BINARY_DIR}/emote_assets_external")
+            set(BOARD_EMOTE_ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/boards/${BOARD_TYPE}/assets")
+            set(BOARD_EMOTE_ASSETS_STAMP "${EMOTE_EXTERNAL_ASSETS_DIR}/.board_assets.stamp")
             set(SDKCONFIG_SRMODELS_BIN "${EMOTE_EXTERNAL_ASSETS_DIR}/wakenet/srmodels.bin")
+            set(EMOTE_ASSET_DEPS ${SDKCONFIG_SRMODELS_BIN})
 
+            if(EXISTS "${BOARD_EMOTE_ASSETS_DIR}")
+                stage_board_emote_assets("${BOARD_EMOTE_ASSETS_DIR}" "${EMOTE_EXTERNAL_ASSETS_DIR}" "${BOARD_EMOTE_ASSETS_STAMP}")
+                list(APPEND EMOTE_ASSET_DEPS ${BOARD_EMOTE_ASSETS_STAMP})
+            endif()
             build_sdkconfig_srmodels_bin("${SDKCONFIG_SRMODELS_BIN}")
-            build_speaker_assets_bin("${ASSETS_PARTITION}" ${EMOTE_RESOLUTION} ${ASSETS_FILE} ${CONFIG_MMAP_FILE_NAME_LENGTH} "${EMOTE_EXTERNAL_ASSETS_DIR}")
+            if(EXISTS "${BOARD_EMOTE_ASSETS_DIR}")
+                add_custom_command(
+                    OUTPUT ${SDKCONFIG_SRMODELS_BIN}
+                    APPEND
+                    DEPENDS ${BOARD_EMOTE_ASSETS_STAMP}
+                )
+            endif()
+            build_locked_speaker_assets_bin("${ASSETS_PARTITION}" ${EMOTE_RESOLUTION} ${ASSETS_FILE} ${CONFIG_MMAP_FILE_NAME_LENGTH} "${EMOTE_EXTERNAL_ASSETS_DIR}")
             add_custom_command(
                 OUTPUT ${ASSETS_FILE}
                 APPEND
-                DEPENDS ${SDKCONFIG_SRMODELS_BIN}
+                DEPENDS ${EMOTE_ASSET_DEPS}
             )
         endif()
         message(STATUS "Generated emote assets: ${ASSETS_FILE} -> ${ASSETS_PARTITION} partition")
