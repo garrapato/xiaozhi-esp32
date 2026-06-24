@@ -10,7 +10,7 @@
                 "CONFIG_LANGUAGE_ES_ES=y",
                 "# CONFIG_SR_WN_WN9_NIHAOXIAOZHI_TTS is not set",
                 "# CONFIG_SR_WN_WN9_NIHAOMIAOBAN_TTS2 is not set",
-                "CONFIG_SR_WN_WN9_ALEXA=y",
+                "CONFIG_SR_WN_WN9_SOPHIA_TTS=y",
                 "CONFIG_OTA_URL=\"https://kotty.ai/kotty-server-web/xiaozhi/ota/\""
             ]
         }
