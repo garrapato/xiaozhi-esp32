@@ -5,6 +5,9 @@
             "name": "kotty_bubble",
             "sdkconfig_append": [
                 "CONFIG_BOARD_TYPE_KOTTY_BUBBLE=y",
+                "CONFIG_USE_EMOTE_MESSAGE_STYLE=y",
+                "CONFIG_MMAP_FILE_NAME_LENGTH=32",
+                "CONFIG_FLASH_EXPRESSION_ASSETS=y",
                 "CONFIG_LANGUAGE_ES_ES=y",
                 "# CONFIG_SR_WN_WN9_NIHAOXIAOZHI_TTS is not set",
                 "# CONFIG_SR_WN_WN9_NIHAOMIAOBAN_TTS2 is not set",

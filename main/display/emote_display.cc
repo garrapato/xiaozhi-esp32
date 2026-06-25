@@ -37,8 +37,6 @@ namespace emote {
 // ============================================================================
 
 static const char* TAG = "EmoteDisplay";
-static constexpr int BOOT_SPLASH_WIDTH = 360;
-static constexpr int BOOT_SPLASH_HEIGHT = 360;
 
 extern const uint8_t kotty_logo_sq_rgb565_start[] asm("_binary_kotty_logo_sq_rgb565_start");
 extern const uint8_t kotty_logo_sq_rgb565_end[] asm("_binary_kotty_logo_sq_rgb565_end");
@@ -61,6 +59,24 @@ static bool OnFlushIoReady(const esp_lcd_panel_io_handle_t panel_io,
         emote_notify_flush_finished(handle);
     }
     return true;
+}
+
+static bool InferSquareRgb565ImageSize(const size_t data_size, int* width, int* height)
+{
+    if (data_size == 0 || data_size % sizeof(uint16_t) != 0) {
+        return false;
+    }
+
+    const size_t pixels = data_size / sizeof(uint16_t);
+    for (size_t side = 1; side * side <= pixels; ++side) {
+        if (side * side == pixels) {
+            *width = static_cast<int>(side);
+            *height = static_cast<int>(side);
+            return true;
+        }
+    }
+
+    return false;
 }
 
 // Flush callback for emote
@@ -214,10 +230,10 @@ void EmoteDisplay::ShowBootSplash(int duration_ms)
     }
 
     const size_t image_size = kotty_logo_sq_rgb565_end - kotty_logo_sq_rgb565_start;
-    const size_t expected_size = BOOT_SPLASH_WIDTH * BOOT_SPLASH_HEIGHT * sizeof(uint16_t);
-    if (image_size != expected_size) {
-        ESP_LOGW(TAG, "Invalid splash image size: %u, expected %u",
-                 static_cast<unsigned>(image_size), static_cast<unsigned>(expected_size));
+    int splash_width = 0;
+    int splash_height = 0;
+    if (!InferSquareRgb565ImageSize(image_size, &splash_width, &splash_height)) {
+        ESP_LOGW(TAG, "Invalid splash image size: %u", static_cast<unsigned>(image_size));
         vTaskDelay(pdMS_TO_TICKS(duration_ms));
         return;
     }
@@ -235,9 +251,9 @@ void EmoteDisplay::ShowBootSplash(int duration_ms)
     boot_splash_image_dsc_.header.magic = C_ARRAY_HEADER_MAGIC;
     boot_splash_image_dsc_.header.cf = GFX_COLOR_FORMAT_RGB565;
     boot_splash_image_dsc_.header.flags = 0;
-    boot_splash_image_dsc_.header.w = BOOT_SPLASH_WIDTH;
-    boot_splash_image_dsc_.header.h = BOOT_SPLASH_HEIGHT;
-    boot_splash_image_dsc_.header.stride = BOOT_SPLASH_WIDTH * sizeof(uint16_t);
+    boot_splash_image_dsc_.header.w = splash_width;
+    boot_splash_image_dsc_.header.h = splash_height;
+    boot_splash_image_dsc_.header.stride = splash_width * sizeof(uint16_t);
     boot_splash_image_dsc_.header.reserved = 0;
     boot_splash_image_dsc_.data_size = image_size;
     boot_splash_image_dsc_.data = kotty_logo_sq_rgb565_start;

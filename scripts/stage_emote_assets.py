@@ -8,6 +8,18 @@ import os
 import shutil
 
 
+IGNORED_NAMES = {".DS_Store"}
+IGNORED_PREFIXES = ("._",)
+
+
+def ignore_metadata(directory, names):
+    del directory
+    return [
+        name for name in names
+        if name in IGNORED_NAMES or name.startswith(IGNORED_PREFIXES)
+    ]
+
+
 def main():
     parser = argparse.ArgumentParser(description="Stage board-local emote assets")
     parser.add_argument("--source", required=True)
@@ -16,7 +28,7 @@ def main():
     args = parser.parse_args()
 
     os.makedirs(args.output, exist_ok=True)
-    shutil.copytree(args.source, args.output, dirs_exist_ok=True)
+    shutil.copytree(args.source, args.output, dirs_exist_ok=True, ignore=ignore_metadata)
 
     os.makedirs(os.path.dirname(os.path.abspath(args.stamp)), exist_ok=True)
     with open(args.stamp, "a", encoding="utf-8"):

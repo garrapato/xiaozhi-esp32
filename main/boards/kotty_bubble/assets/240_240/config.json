@@ -1,0 +1,5 @@
+{
+    "text_font": "font_puhui_common_14_1",
+    "emoji_collection": "emoji_large",
+    "wakenet_model": "srmodels.bin"
+}

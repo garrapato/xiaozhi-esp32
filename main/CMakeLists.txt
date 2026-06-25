@@ -792,6 +792,7 @@ elseif(CONFIG_BOARD_TYPE_KOTTY_BUBBLE)
     set(BUILTIN_TEXT_FONT font_puhui_basic_16_4)
     set(BUILTIN_ICON_FONT font_awesome_16_4)
     set(DEFAULT_EMOJI_COLLECTION twemoji_64)
+    set(EMOTE_RESOLUTION "240_240")
 elseif(CONFIG_BOARD_TYPE_OTTO_ROBOT)
     set(BOARD_TYPE "otto-robot")
     set(BUILTIN_TEXT_FONT font_puhui_16_4)
@@ -1037,6 +1038,11 @@ if(CONFIG_BOARD_TYPE_ESP_VOCAT)
     )
     list(APPEND MAIN_EMBED_FILES_EXTRA
         "${CMAKE_CURRENT_SOURCE_DIR}/boards/esp-vocat/assets/splash/kotty-logo-sq.rgb565"
+    )
+endif()
+if(CONFIG_BOARD_TYPE_KOTTY_BUBBLE)
+    list(APPEND MAIN_EMBED_FILES_EXTRA
+        "${CMAKE_CURRENT_SOURCE_DIR}/boards/kotty_bubble/assets/splash/kotty-logo-sq.rgb565"
     )
 endif()
 
