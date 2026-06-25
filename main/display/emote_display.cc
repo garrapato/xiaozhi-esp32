@@ -187,12 +187,21 @@ void EmoteDisplay::SetStatus(const char* const status)
     ESP_LOGI(TAG, "SetStatus: %s", status);
     if (emote_handle_ && status && strlen(status) > 0) {
         if (std::strcmp(status, Lang::Strings::LISTENING) == 0) {
+            idle_status_ = false;
+            notification_active_ = false;
             emote_set_event_msg(emote_handle_, EMOTE_MGR_EVT_LISTEN, NULL);
         } else if (std::strcmp(status, Lang::Strings::STANDBY) == 0) {
-            emote_set_event_msg(emote_handle_, EMOTE_MGR_EVT_IDLE, NULL);
+            idle_status_ = true;
+            if (!notification_active_) {
+                emote_set_event_msg(emote_handle_, EMOTE_MGR_EVT_IDLE, NULL);
+            }
         } else if (std::strcmp(status, Lang::Strings::SPEAKING) == 0) {
+            idle_status_ = false;
+            notification_active_ = false;
             emote_set_event_msg(emote_handle_, EMOTE_MGR_EVT_SPEAK, NULL);
         } else if (std::strcmp(status, Lang::Strings::ERROR) == 0) {
+            idle_status_ = false;
+            notification_active_ = false;
             emote_set_event_msg(emote_handle_, EMOTE_MGR_EVT_SET, NULL);
         }
     }
@@ -202,6 +211,8 @@ void EmoteDisplay::ShowNotification(const char* notification, int duration_ms)
 {
     ESP_LOGI(TAG, "ShowNotification: %s", notification);
     if (emote_handle_ && notification && strlen(notification) > 0) {
+        notification_active_ = duration_ms > 0;
+        notification_expire_time_ms_ = (esp_timer_get_time() / 1000) + duration_ms;
         emote_set_event_msg(emote_handle_, EMOTE_MGR_EVT_SYS, notification);
     }
 }
@@ -211,6 +222,20 @@ void EmoteDisplay::UpdateStatusBar(bool update_all)
     ESP_LOGD(TAG, "UpdateStatusBar: %s", update_all ? "true" : "false");
     if (!emote_handle_) {
         return;
+    }
+
+    if (notification_active_) {
+        const int64_t now_ms = esp_timer_get_time() / 1000;
+        if (now_ms < notification_expire_time_ms_) {
+            return;
+        }
+        notification_active_ = false;
+    } else if (!update_all) {
+        return;
+    }
+
+    if (idle_status_) {
+        emote_set_event_msg(emote_handle_, EMOTE_MGR_EVT_IDLE, NULL);
     }
 }
 

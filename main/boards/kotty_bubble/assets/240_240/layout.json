@@ -3,7 +3,7 @@
     "type": "anim",
     "name": "eye_anim",
     "align": "GFX_ALIGN_LEFT_MID",
-    "x": 30,
+    "x": 20,
     "y": 0,
     "anim": {
       "mirror": "auto"

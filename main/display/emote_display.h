@@ -39,6 +39,9 @@ private:
     emote_handle_t emote_handle_ = nullptr;
     gfx_obj_t* boot_splash_obj_ = nullptr;
     gfx_image_dsc_t boot_splash_image_dsc_ = {};
+    bool idle_status_ = false;
+    bool notification_active_ = false;
+    int64_t notification_expire_time_ms_ = 0;
 
 };
 
