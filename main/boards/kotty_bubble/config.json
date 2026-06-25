@@ -1,0 +1,16 @@
+{
+    "target": "esp32s3",
+    "builds": [
+        {
+            "name": "kotty_bubble",
+            "sdkconfig_append": [
+                "CONFIG_BOARD_TYPE_KOTTY_BUBBLE=y",
+                "CONFIG_LANGUAGE_ES_ES=y",
+                "# CONFIG_SR_WN_WN9_NIHAOXIAOZHI_TTS is not set",
+                "# CONFIG_SR_WN_WN9_NIHAOMIAOBAN_TTS2 is not set",
+                "CONFIG_SR_WN_WN9_SOPHIA_TTS=y",
+                "CONFIG_OTA_URL=\"https://kotty.ai/kotty-server-web/xiaozhi/ota/\""
+            ]
+        }
+    ]
+}

@@ -85,6 +85,9 @@ def _collect_variants(config_filename: str = "config.json") -> list[dict[str, st
         board_dir = cfg_path.parent
         if board_dir.name == "common":
             continue
+        relative_parts = cfg_path.relative_to(_BOARDS_DIR).parts
+        if "assets" in relative_parts:
+            continue
         board = board_dir.relative_to(_BOARDS_DIR).as_posix()
 
         try:
