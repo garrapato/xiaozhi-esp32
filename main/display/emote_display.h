@@ -21,6 +21,7 @@ public:
     virtual void ShowNotification(const char* notification, int duration_ms = 3000) override;
     virtual void UpdateStatusBar(bool update_all = false) override;
     virtual void SetPowerSaveMode(bool on) override;
+    virtual const char* GetStartupEmotion() const override { return "neutral"; }
     virtual void ShowBootSplash(int duration_ms = 3000) override;
     virtual void SetPreviewImage(const void* image);
 

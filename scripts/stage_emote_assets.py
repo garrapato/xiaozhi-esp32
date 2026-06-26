@@ -27,6 +27,8 @@ def main():
     parser.add_argument("--stamp", required=True)
     args = parser.parse_args()
 
+    if os.path.exists(args.output):
+        shutil.rmtree(args.output)
     os.makedirs(args.output, exist_ok=True)
     shutil.copytree(args.source, args.output, dirs_exist_ok=True, ignore=ignore_metadata)
 

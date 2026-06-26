@@ -40,6 +40,7 @@ public:
     virtual Theme* GetTheme() { return current_theme_; }
     virtual void UpdateStatusBar(bool update_all = false);
     virtual void SetPowerSaveMode(bool on);
+    virtual const char* GetStartupEmotion() const { return "microchip_ai"; }
     virtual void ShowBootSplash(int duration_ms = 3000) { (void)duration_ms; }
     virtual void SetupUI() { 
         setup_ui_called_ = true;
