@@ -23,8 +23,8 @@
     "type": "image",
     "name": "status_icon",
     "align": "GFX_ALIGN_TOP_MID",
-    "x": -100,
-    "y": 38
+    "x": 0,
+    "y": 200 
   },
   {
     "type": "image",
