@@ -31,11 +31,13 @@ public:
 
     // Get emote handle for internal use
     emote_handle_t GetEmoteHandle() const { return emote_handle_; }
+    void SetAssetsLoaded(bool loaded);
 
 private:
     virtual bool Lock(int timeout_ms = 0) override;
     virtual void Unlock() override;
     void ApplyClockFont();
+    void ShowPreloadMessage(const char* message);
 
     emote_handle_t emote_handle_ = nullptr;
     gfx_obj_t* boot_splash_obj_ = nullptr;
@@ -43,6 +45,7 @@ private:
     bool idle_status_ = false;
     bool notification_active_ = false;
     bool clock_font_applied_ = false;
+    bool assets_loaded_ = false;
     int64_t notification_expire_time_ms_ = 0;
 
 };

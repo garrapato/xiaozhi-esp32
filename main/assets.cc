@@ -420,7 +420,13 @@ bool Assets::EmoteStrategy::Apply(Assets* assets, bool refresh_display_theme) {
     auto* emote_display = dynamic_cast<emote::EmoteDisplay*>(display);
 
     if (emote_display && emote_display->GetEmoteHandle() != nullptr) {
-        emote_load_assets(emote_display->GetEmoteHandle());
+        emote_display->SetAssetsLoaded(false);
+        esp_err_t ret = emote_load_assets(emote_display->GetEmoteHandle());
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to load emote assets: %s", esp_err_to_name(ret));
+            return false;
+        }
+        emote_display->SetAssetsLoaded(true);
     }
     return true;
 }

@@ -163,7 +163,7 @@ EmoteDisplay::~EmoteDisplay()
 void EmoteDisplay::SetEmotion(const char* const emotion)
 {
     ESP_LOGI(TAG, "SetEmotion: %s", emotion);
-    if (emote_handle_ && emotion && strlen(emotion) > 0) {
+    if (emote_handle_ && assets_loaded_ && emotion && strlen(emotion) > 0) {
         emote_set_anim_emoji(emote_handle_, emotion);
     }
 }
@@ -171,7 +171,11 @@ void EmoteDisplay::SetEmotion(const char* const emotion)
 void EmoteDisplay::SetChatMessage(const char* const role, const char* const content)
 {
     ESP_LOGI(TAG, "SetChatMessage: %s, %s", role, content);
-    if (emote_handle_ && content && strlen(content) > 0) {
+    if (emote_handle_ && !assets_loaded_ && content && strlen(content) > 0) {
+        ShowPreloadMessage(content);
+        return;
+    }
+    if (emote_handle_ && assets_loaded_ && content && strlen(content) > 0) {
         if ((std::strcmp(role, "system") == 0) && std::strstr(content, "xiaozhi.me")) {
             size_t len = strlen(content);
             char* new_content = new char[len + 1];
@@ -188,7 +192,11 @@ void EmoteDisplay::SetChatMessage(const char* const role, const char* const cont
 void EmoteDisplay::SetStatus(const char* const status)
 {
     ESP_LOGI(TAG, "SetStatus: %s", status);
-    if (emote_handle_ && status && strlen(status) > 0) {
+    if (emote_handle_ && !assets_loaded_ && status && strlen(status) > 0) {
+        ShowPreloadMessage(status);
+        return;
+    }
+    if (emote_handle_ && assets_loaded_ && status && strlen(status) > 0) {
         if (std::strcmp(status, Lang::Strings::LISTENING) == 0) {
             idle_status_ = false;
             notification_active_ = false;
@@ -214,7 +222,11 @@ void EmoteDisplay::SetStatus(const char* const status)
 void EmoteDisplay::ShowNotification(const char* notification, int duration_ms)
 {
     ESP_LOGI(TAG, "ShowNotification: %s", notification);
-    if (emote_handle_ && notification && strlen(notification) > 0) {
+    if (emote_handle_ && !assets_loaded_ && notification && strlen(notification) > 0) {
+        ShowPreloadMessage(notification);
+        return;
+    }
+    if (emote_handle_ && assets_loaded_ && notification && strlen(notification) > 0) {
         notification_active_ = duration_ms > 0;
         notification_expire_time_ms_ = (esp_timer_get_time() / 1000) + duration_ms;
         emote_set_event_msg(emote_handle_, EMOTE_MGR_EVT_SYS, notification);
@@ -224,7 +236,7 @@ void EmoteDisplay::ShowNotification(const char* notification, int duration_ms)
 void EmoteDisplay::UpdateStatusBar(bool update_all)
 {
     ESP_LOGD(TAG, "UpdateStatusBar: %s", update_all ? "true" : "false");
-    if (!emote_handle_) {
+    if (!emote_handle_ || !assets_loaded_) {
         return;
     }
 
@@ -246,7 +258,7 @@ void EmoteDisplay::UpdateStatusBar(bool update_all)
 
 void EmoteDisplay::ApplyClockFont()
 {
-    if (clock_font_applied_ || !emote_handle_) {
+    if (clock_font_applied_ || !emote_handle_ || !assets_loaded_) {
         return;
     }
 
@@ -259,6 +271,38 @@ void EmoteDisplay::ApplyClockFont()
     gfx_label_set_font(clock_label, (gfx_font_t)&font_puhui_basic_20_4);
     emote_unlock(emote_handle_);
     clock_font_applied_ = true;
+}
+
+void EmoteDisplay::ShowPreloadMessage(const char* message)
+{
+    auto* label = emote_get_obj_by_name(emote_handle_, EMT_DEF_ELEM_DEFAULT_LABEL);
+    if (!label) {
+        return;
+    }
+
+    emote_lock(emote_handle_);
+    gfx_label_set_text(label, message);
+    gfx_obj_set_visible(label, true);
+    emote_unlock(emote_handle_);
+    RefreshAll();
+}
+
+void EmoteDisplay::SetAssetsLoaded(bool loaded)
+{
+    assets_loaded_ = loaded;
+    if (!loaded || !emote_handle_) {
+        return;
+    }
+
+    auto* label = emote_get_obj_by_name(emote_handle_, EMT_DEF_ELEM_DEFAULT_LABEL);
+    if (!label) {
+        return;
+    }
+
+    emote_lock(emote_handle_);
+    gfx_label_set_text(label, "");
+    gfx_obj_set_visible(label, false);
+    emote_unlock(emote_handle_);
 }
 
 void EmoteDisplay::SetPowerSaveMode(bool on)
@@ -347,7 +391,7 @@ void EmoteDisplay::Unlock()
 bool EmoteDisplay::StopAnimDialog()
 {
     ESP_LOGI(TAG, "StopAnimDialog");
-    if (emote_handle_) {
+    if (emote_handle_ && assets_loaded_) {
         return emote_stop_anim_dialog(emote_handle_);
     }
     return false;
@@ -356,7 +400,7 @@ bool EmoteDisplay::StopAnimDialog()
 bool EmoteDisplay::InsertAnimDialog(const char* emoji_name, uint32_t duration_ms)
 {
     ESP_LOGI(TAG, "InsertAnimDialog: %s, %" PRIu32, emoji_name, duration_ms);
-    if (emote_handle_ && emoji_name) {
+    if (emote_handle_ && assets_loaded_ && emoji_name) {
         return emote_insert_anim_dialog(emote_handle_, emoji_name, duration_ms);
     }
     return false;
