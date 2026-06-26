@@ -27,7 +27,10 @@
 #include "assets.h"
 #include "board.h"
 #include "gfx.h"
+#include "widget/gfx_label.h"
 #include "expression_emote.h"
+
+LV_FONT_DECLARE(font_puhui_basic_20_4);
 
 
 namespace emote {
@@ -194,6 +197,7 @@ void EmoteDisplay::SetStatus(const char* const status)
             idle_status_ = true;
             if (!notification_active_) {
                 emote_set_event_msg(emote_handle_, EMOTE_MGR_EVT_IDLE, NULL);
+                ApplyClockFont();
             }
         } else if (std::strcmp(status, Lang::Strings::SPEAKING) == 0) {
             idle_status_ = false;
@@ -236,7 +240,25 @@ void EmoteDisplay::UpdateStatusBar(bool update_all)
 
     if (idle_status_) {
         emote_set_event_msg(emote_handle_, EMOTE_MGR_EVT_IDLE, NULL);
+        ApplyClockFont();
     }
+}
+
+void EmoteDisplay::ApplyClockFont()
+{
+    if (clock_font_applied_ || !emote_handle_) {
+        return;
+    }
+
+    auto* clock_label = emote_get_obj_by_name(emote_handle_, EMT_DEF_ELEM_CLOCK_LABEL);
+    if (!clock_label) {
+        return;
+    }
+
+    emote_lock(emote_handle_);
+    gfx_label_set_font(clock_label, (gfx_font_t)&font_puhui_basic_20_4);
+    emote_unlock(emote_handle_);
+    clock_font_applied_ = true;
 }
 
 void EmoteDisplay::SetPowerSaveMode(bool on)
