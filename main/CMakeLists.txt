@@ -292,6 +292,12 @@ elseif(CONFIG_BOARD_TYPE_ESP_VOCAT)
     set(DEFAULT_EMOJI_COLLECTION twemoji_64)
     set(EMOTE_RESOLUTION "360_360")
     # set(EMOTE_EXTERNAL_PATH "${CMAKE_CURRENT_SOURCE_DIR}/boards/esp-vocat/assets")
+elseif(CONFIG_BOARD_TYPE_KOTTY_MEOW)
+    set(BOARD_TYPE "kotty_meow")
+    set(BUILTIN_TEXT_FONT font_puhui_20_4)
+    set(BUILTIN_ICON_FONT font_awesome_20_4)
+    set(DEFAULT_EMOJI_COLLECTION twemoji_64)
+    set(EMOTE_RESOLUTION "360_360")
 elseif(CONFIG_BOARD_TYPE_ESP_SENSAIRSHUTTLE)
     set(BOARD_TYPE "esp-sensairshuttle")
     set(BUILTIN_TEXT_FONT font_puhui_basic_16_4)
@@ -1038,6 +1044,15 @@ if(CONFIG_BOARD_TYPE_ESP_VOCAT)
     )
     list(APPEND MAIN_EMBED_FILES_EXTRA
         "${CMAKE_CURRENT_SOURCE_DIR}/boards/esp-vocat/assets/splash/kotty-logo-sq.rgb565"
+    )
+endif()
+if(CONFIG_BOARD_TYPE_KOTTY_MEOW)
+    list(APPEND MAIN_PRIV_REQUIRES_EXTRA
+        espressif__touch_slider_sensor
+        espressif__touch_button_sensor
+    )
+    list(APPEND MAIN_EMBED_FILES_EXTRA
+        "${CMAKE_CURRENT_SOURCE_DIR}/boards/kotty_meow/assets/splash/kotty-logo-sq.rgb565"
     )
 endif()
 if(CONFIG_BOARD_TYPE_KOTTY_BUBBLE)
