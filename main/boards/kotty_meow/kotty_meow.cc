@@ -11,6 +11,7 @@
 #include <esp_log.h>
 #include <esp_timer.h>
 #include "esp_idf_version.h"
+#include <atomic>
 #include <cinttypes>
 
 #include <driver/i2c_master.h>
@@ -290,11 +291,29 @@ public:
 
         int16_t voltage = static_cast<uint16_t>(read_buffer_[1] << 8 | read_buffer_[0]);
         int16_t current = static_cast<int16_t>(read_buffer_[3] << 8 | read_buffer_[2]);
-        
-        // Use the variables to avoid warnings (can be removed if actual implementation uses them)
-        (void)voltage;
-        (void)current;
+
+        voltage_mv_.store(voltage, std::memory_order_relaxed);
+        current_ma_.store(current, std::memory_order_relaxed);
+        has_sample_.store(true, std::memory_order_release);
     }
+
+    bool GetBatteryLevel(int& level, bool& charging, bool& discharging)
+    {
+        if (!has_sample_.load(std::memory_order_acquire)) {
+            level = 0;
+            charging = false;
+            discharging = false;
+            return false;
+        }
+
+        const int voltage_mv = voltage_mv_.load(std::memory_order_relaxed);
+        const int current_ma = current_ma_.load(std::memory_order_relaxed);
+        level = VoltageToLevel(voltage_mv);
+        charging = current_ma > 0 && level < 100;
+        discharging = !charging;
+        return true;
+    }
+
     static void TaskFunction(void *pvParameters)
     {
         Charge* charge = static_cast<Charge*>(pvParameters);
@@ -305,7 +324,24 @@ public:
     }
 
 private:
+    static int VoltageToLevel(int voltage_mv)
+    {
+        constexpr int kBatteryEmptyMv = 3300;
+        constexpr int kBatteryFullMv = 4200;
+
+        if (voltage_mv <= kBatteryEmptyMv) {
+            return 0;
+        }
+        if (voltage_mv >= kBatteryFullMv) {
+            return 100;
+        }
+        return (voltage_mv - kBatteryEmptyMv) * 100 / (kBatteryFullMv - kBatteryEmptyMv);
+    }
+
     uint8_t* read_buffer_ = nullptr;
+    std::atomic<int16_t> voltage_mv_{0};
+    std::atomic<int16_t> current_ma_{0};
+    std::atomic<bool> has_sample_{false};
 };
 
 class Cst816s : public I2cDevice {
@@ -1011,6 +1047,17 @@ public:
 
     virtual Camera* GetCamera() override {
         return camera_;
+    }
+
+    virtual bool GetBatteryLevel(int& level, bool& charging, bool& discharging) override
+    {
+        if (charge_ == nullptr) {
+            level = 0;
+            charging = false;
+            discharging = false;
+            return false;
+        }
+        return charge_->GetBatteryLevel(level, charging, discharging);
     }
 };
 
