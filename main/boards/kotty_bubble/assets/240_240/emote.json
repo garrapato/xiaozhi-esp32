@@ -14,9 +14,10 @@
     {"emote": "surprised",   "src": "Happy.eaf",     "loop": true,  "fps": 20},
     {"emote": "shocked",     "src": "shocked.eaf",   "loop": true,  "fps": 20},
     {"emote": "thinking",    "src": "confused.eaf",  "loop": true,  "fps": 20},
-    {"emote": "winking",     "src": "neutral.eaf",   "loop": true,  "fps": 20},
+    {"emote": "winking",     "src": "winking.eaf",   "loop": true,  "fps": 20},
     {"emote": "relaxed",     "src": "Happy.eaf",     "loop": true,  "fps": 20},
     {"emote": "confused",    "src": "confused.eaf",  "loop": true,  "fps": 20},
-    {"emote": "neutral",     "src": "kotty_eyes.eaf",   "loop": false, "fps": 20},
-    {"emote": "idle",        "src": "kotty_eyes.eaf",   "loop": false, "fps": 20}
+    {"emote": "neutral",     "src": "kotty_eyes.eaf","loop": false, "fps": 20},
+    {"emote": "idle",        "src": "kotty_eyes.eaf","loop": true,  "fps": 20},
+    {"emote": "generate",    "src": "generate.eaf",  "loop": true,  "fps": 32}
 ]

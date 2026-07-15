@@ -340,7 +340,10 @@ static esp_err_t emote_handle_thinking_event(emote_handle_t handle, const char *
     (void)message;
     esp_err_t ret = ESP_OK;
 
-    ret = emote_set_emoji_animation(handle, EMOTE_DEF_OBJ_ANIM_THINKING, "thinking");
+    ret = emote_set_emoji_animation(handle, EMOTE_DEF_OBJ_ANIM_THINKING, "generate");
+    if (ret != ESP_OK) {
+        ret = emote_set_icon_animation(handle, EMOTE_DEF_OBJ_ANIM_THINKING, EMOTE_ICON_LISTEN, 15, true);
+    }
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "Failed to set thinking animation");
     }

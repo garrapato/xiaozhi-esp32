@@ -936,7 +936,7 @@ void Application::HandleStateChangedEvent() {
             break;
         case kDeviceStateThinking:
             display->SetStatus(Lang::Strings::THINKING);
-            display->SetEmotion("thinking");
+            display->SetEmotion("neutral");
             audio_service_.EnableVoiceProcessing(false);
             if (listening_mode_ != kListeningModeRealtime) {
                 audio_service_.EnableWakeWordDetection(audio_service_.IsAfeWakeWord());
