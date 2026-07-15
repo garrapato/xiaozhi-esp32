@@ -1,5 +1,8 @@
 tmp/
 components/
+!components/
+!components/espressif2022__esp_emote_expression/
+!components/espressif2022__esp_emote_expression/**
 managed_components/
 build/
 dist/

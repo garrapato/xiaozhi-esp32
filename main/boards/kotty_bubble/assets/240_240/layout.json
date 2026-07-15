@@ -96,6 +96,16 @@
     }
   },
   {
+    "type": "anim",
+    "name": "thinking_anim",
+    "align": "GFX_ALIGN_TOP_MID",
+    "x": 0,
+    "y": 25,
+    "anim": {
+      "mirror": "false"
+    }
+  },
+  {
     "type": "timer",
     "name": "clock_timer",
     "timer": {

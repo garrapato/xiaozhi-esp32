@@ -139,6 +139,10 @@ void SingleLed::OnStateChanged() {
             SetColor(0, 0, DEFAULT_BRIGHTNESS);
             TurnOn();
             break;
+        case kDeviceStateThinking:
+            SetColor(0, 0, DEFAULT_BRIGHTNESS);
+            TurnOn();
+            break;
         case kDeviceStateListening:
         case kDeviceStateAudioTesting:
             if (app.IsVoiceDetected()) {

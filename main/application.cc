@@ -88,6 +88,7 @@ void Application::Initialize() {
 
     // Add state change listeners
     state_machine_.AddStateChangeListener([this](DeviceState old_state, DeviceState new_state) {
+        previous_state_.store(old_state);
         xEventGroupSetBits(event_group_, MAIN_EVENT_STATE_CHANGED);
     });
 
@@ -497,8 +498,18 @@ void Application::InitializeProtocol() {
     });
     
     protocol_->OnIncomingAudio([this](std::unique_ptr<AudioStreamPacket> packet) {
-        if (GetDeviceState() == kDeviceStateSpeaking) {
+        auto state = GetDeviceState();
+        if (state == kDeviceStateSpeaking) {
             audio_service_.PushPacketToDecodeQueue(std::move(packet));
+        } else if (state == kDeviceStateThinking || state == kDeviceStateListening) {
+            auto first_packet = std::make_shared<AudioStreamPacket>(std::move(*packet));
+            Schedule([this, first_packet]() {
+                auto state = GetDeviceState();
+                if (state == kDeviceStateThinking || state == kDeviceStateListening) {
+                    SetDeviceState(kDeviceStateSpeaking);
+                    audio_service_.PushPacketToDecodeQueue(std::make_unique<AudioStreamPacket>(*first_packet));
+                }
+            });
         }
     });
     
@@ -527,11 +538,14 @@ void Application::InitializeProtocol() {
             if (strcmp(state->valuestring, "start") == 0) {
                 Schedule([this]() {
                     aborted_ = false;
-                    SetDeviceState(kDeviceStateSpeaking);
+                    if (GetDeviceState() == kDeviceStateListening) {
+                        SetDeviceState(kDeviceStateThinking);
+                    }
                 });
             } else if (strcmp(state->valuestring, "stop") == 0) {
                 Schedule([this]() {
-                    if (GetDeviceState() == kDeviceStateSpeaking) {
+                    auto state = GetDeviceState();
+                    if (state == kDeviceStateSpeaking || state == kDeviceStateThinking) {
                         if (listening_mode_ == kListeningModeManualStop) {
                             SetDeviceState(kDeviceStateIdle);
                         } else {
@@ -772,9 +786,17 @@ void Application::HandleStopListeningEvent() {
         return;
     } else if (state == kDeviceStateListening) {
         if (protocol_) {
+            audio_service_.EnableVoiceProcessing(false);
+            while (auto packet = audio_service_.PopPacketFromSendQueue()) {
+                if (!protocol_->SendAudio(std::move(packet))) {
+                    break;
+                }
+            }
             protocol_->SendStopListening();
+            SetDeviceState(kDeviceStateThinking);
+        } else {
+            SetDeviceState(kDeviceStateIdle);
         }
-        SetDeviceState(kDeviceStateIdle);
     }
 }
 
@@ -912,6 +934,15 @@ void Application::HandleStateChangedEvent() {
                 audio_service_.PlaySound(Lang::Sounds::OGG_POPUP);
             }
             break;
+        case kDeviceStateThinking:
+            display->SetStatus(Lang::Strings::THINKING);
+            display->SetEmotion("thinking");
+            audio_service_.EnableVoiceProcessing(false);
+            if (listening_mode_ != kListeningModeRealtime) {
+                audio_service_.EnableWakeWordDetection(audio_service_.IsAfeWakeWord());
+            }
+            audio_service_.ResetDecoder();
+            break;
         case kDeviceStateSpeaking:
             display->SetStatus(Lang::Strings::SPEAKING);
 
@@ -920,7 +951,9 @@ void Application::HandleStateChangedEvent() {
                 // Only AFE wake word can be detected in speaking mode
                 audio_service_.EnableWakeWordDetection(audio_service_.IsAfeWakeWord());
             }
-            audio_service_.ResetDecoder();
+            if (previous_state_.load() != kDeviceStateThinking) {
+                audio_service_.ResetDecoder();
+            }
             break;
         case kDeviceStateWifiConfiguring:
             audio_service_.EnableVoiceProcessing(false);

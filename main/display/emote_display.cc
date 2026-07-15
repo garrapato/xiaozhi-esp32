@@ -201,6 +201,10 @@ void EmoteDisplay::SetStatus(const char* const status)
             idle_status_ = false;
             notification_active_ = false;
             emote_set_event_msg(emote_handle_, EMOTE_MGR_EVT_LISTEN, NULL);
+        } else if (std::strcmp(status, Lang::Strings::THINKING) == 0) {
+            idle_status_ = false;
+            notification_active_ = false;
+            emote_set_event_msg(emote_handle_, EMOTE_MGR_EVT_THINKING, NULL);
         } else if (std::strcmp(status, Lang::Strings::STANDBY) == 0) {
             idle_status_ = true;
             if (!notification_active_) {

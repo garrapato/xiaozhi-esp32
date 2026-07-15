@@ -13,6 +13,7 @@ static const char* const STATE_STRINGS[] = {
     "idle",
     "connecting",
     "listening",
+    "thinking",
     "speaking",
     "upgrading",
     "activating",
@@ -83,8 +84,15 @@ bool DeviceStateMachine::IsValidTransition(DeviceState from, DeviceState to) con
                    to == kDeviceStateListening;
 
         case kDeviceStateListening:
-            // Can go to speaking or idle
+            // Can go to thinking, speaking, or idle
+            return to == kDeviceStateThinking ||
+                   to == kDeviceStateSpeaking ||
+                   to == kDeviceStateIdle;
+
+        case kDeviceStateThinking:
+            // Can go to speaking after the first incoming audio packet, or return to listening/idle
             return to == kDeviceStateSpeaking ||
+                   to == kDeviceStateListening ||
                    to == kDeviceStateIdle;
 
         case kDeviceStateSpeaking:

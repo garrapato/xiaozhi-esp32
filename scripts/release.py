@@ -266,6 +266,29 @@ _AUTO_SELECT_RULES: dict[str, list[str]] = {
     ],
 }
 
+_SDKCONFIG_SET_RE = re.compile(r"^(CONFIG_[A-Z0-9_]+)=")
+_SDKCONFIG_UNSET_RE = re.compile(r"^# (CONFIG_[A-Z0-9_]+) is not set$")
+
+
+def _sdkconfig_key(entry: str) -> str:
+    """Return Kconfig symbol from a sdkconfig line and reject malformed entries."""
+    stripped = entry.strip()
+    set_match = _SDKCONFIG_SET_RE.match(stripped)
+    if set_match:
+        return set_match.group(1)
+
+    unset_match = _SDKCONFIG_UNSET_RE.match(stripped)
+    if unset_match:
+        return unset_match.group(1)
+
+    if stripped.startswith("# ") and stripped.endswith(" is not set"):
+        raise ValueError(
+            f"Malformed sdkconfig unset entry: {entry!r}. "
+            "Expected '# CONFIG_SYMBOL is not set'."
+        )
+
+    raise ValueError(f"Unsupported sdkconfig_append entry: {entry!r}")
+
 
 def _apply_auto_selects(sdkconfig_append: list[str]) -> list[str]:
     """Apply hardcoded auto-select rules to sdkconfig_append."""
@@ -273,7 +296,7 @@ def _apply_auto_selects(sdkconfig_append: list[str]) -> list[str]:
     existing_keys: set[str] = set()
 
     def _append_if_missing(entry: str) -> None:
-        key = entry.split("=", 1)[0]
+        key = _sdkconfig_key(entry)
         if key not in existing_keys:
             items.append(entry)
             existing_keys.add(key)
@@ -285,7 +308,8 @@ def _apply_auto_selects(sdkconfig_append: list[str]) -> list[str]:
     # Apply auto-select rules
     for key, deps in _AUTO_SELECT_RULES.items():
         for entry in sdkconfig_append:
-            name, _, value = entry.partition("=")
+            name = _sdkconfig_key(entry)
+            _, _, value = entry.partition("=")
             if name == key and value.lower().startswith("y"):
                 for dep in deps:
                     _append_if_missing(dep)
@@ -307,13 +331,14 @@ def _board_type_exists(board_type: str) -> bool:
 # Compile implementation
 ################################################################################
 
-def release(board_type: str, config_filename: str = "config.json", *, filter_name: Optional[str] = None) -> None:
+def release(board_type: str, config_filename: str = "config.json", *, filter_name: Optional[str] = None, force: bool = False) -> None:
     """Compile and package all/specified variants of the specified board_type
 
     Args:
         board_type: directory name under main/boards
         config_filename: config.json name (default: config.json)
         filter_name: if specified, only compile the build["name"] that matches
+        force: rebuild even when the release zip already exists
     """
     cfg_path = _BOARDS_DIR / Path(board_type) / config_filename
     if not cfg_path.exists():
@@ -344,7 +369,7 @@ def release(board_type: str, config_filename: str = "config.json", *, filter_nam
         
         final_name = f"{manufacturer}-{name}" if manufacturer else name
         output_path = Path("releases") / f"v{project_version}_{final_name}.zip"
-        if output_path.exists():
+        if output_path.exists() and not force:
             print(f"Skipping {final_name} because {output_path} already exists")
             continue
 
@@ -406,6 +431,7 @@ if __name__ == "__main__":
     parser.add_argument("--list-boards", action="store_true", help="List all supported boards and variants")
     parser.add_argument("--json", action="store_true", help="Output in JSON format (use with --list-boards)")
     parser.add_argument("--name", help="Variant name to compile (original name without manufacturer prefix)")
+    parser.add_argument("--force", action="store_true", help="Rebuild even if the release zip already exists")
 
     args = parser.parse_args()
 
@@ -456,4 +482,4 @@ if __name__ == "__main__":
         if bt == board_type_input and not cfg_path.exists():
             print(f"Board {bt} has no {args.config} config file, skipping")
             sys.exit(0)
-        release(bt, config_filename=args.config, filter_name=name_filter if bt == board_type_input else None)
+        release(bt, config_filename=args.config, filter_name=name_filter if bt == board_type_input else None, force=args.force)
